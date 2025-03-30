@@ -1,8 +1,0 @@
-UnitBlueprint {
-BlueprintId="uel0304",Merge=true,
-Weapon = {
-{
-MuzzleVelocity = 30,
-},
-},
-}
