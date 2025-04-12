@@ -7,34 +7,14 @@
 -- **
 -- **  Copyright � 2005 Gas Powered Games, Inc.  All rights reserved.
 -- ****************************************************************************
+local Utils = import('/mods/TotalVeterancyRebalanced/lua/sim/VeterancyUtils.lua')
 local oldShield = Shield
 Shield = Class(oldShield) {
 
-    InitBuffValues = function(self, spec)
-        self.spec = spec
-        local UnitxpValue = spec.Owner:GetBlueprint().Economy.xpValue
-        if UnitxpValue == nil then
-            UnitxpValue = 1
-        end
-        local ShieldHealthValue = spec.ShieldMaxHealth
-        if ShieldHealthValue == nil then
-            ShieldHealthValue = 1
-        end
-
-        if spec.Owner then
-            self.XPperDamage = UnitxpValue / ShieldHealthValue
-        else
-            self.XPperDamage = 0
-        end
-        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth -- replace this with generic
-        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate -- method to directly query
-        -- LOG(spec.ShieldRegenRate)
-        -- LOG(self.XPperDamage)
-
-    end,
-
     OnCreate = function(self, spec)
-        self:InitBuffValues(spec)
+        self.spec = spec
+        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth
+        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate
         oldShield.OnCreate(self, spec)
     end,
 
@@ -45,10 +25,11 @@ Shield = Class(oldShield) {
 
     OnDamage = function(self, instigator, amount, vector, type)
         local absorbed = self:OnGetDamageAbsorption(instigator, amount, type)
-        local hp = self:GetMaxHealth()
-        if (self.XPperDamage * absorbed) > 3 then
-            self.Owner:AddXP(self.XPperDamage * absorbed * 0.25)
-            --               LOG('___' .. self.XPperDamage*absorbed)
+        local xpPerHp = self.Owner.xpPerHp
+        if xpPerHp then
+            local sumXp = xpPerHp * absorbed
+            self.Owner:AddXp(sumXp * Utils.TakenDamegeToXpModifier)
+            instigator:AddXp(sumXp * Utils.DealingDamageToXpModifier)
         end
         oldShield.OnDamage(self, instigator, amount, vector, type)
     end
@@ -57,31 +38,10 @@ Shield = Class(oldShield) {
 local oldUnitShield = PersonalShield
 PersonalShield = Class(oldUnitShield) {
 
-    InitBuffValues = function(self, spec)
-        self.spec = spec
-        local UnitxpValue = spec.Owner:GetBlueprint().Economy.xpValue
-        if UnitxpValue == nil then
-            UnitxpValue = 1
-        end
-        local ShieldHealthValue = spec.ShieldMaxHealth
-        if ShieldHealthValue == nil then
-            ShieldHealthValue = 1
-        end
-
-        if spec.Owner then
-            self.XPperDamage = UnitxpValue / ShieldHealthValue
-        else
-            self.XPperDamage = 0
-        end
-        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth -- replace this with generic
-        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate -- method to directly query
-        -- LOG(spec.ShieldRegenRate)
-        -- LOG(self.XPperDamage)
-
-    end,
-
     OnCreate = function(self, spec)
-        Shield.InitBuffValues(self, spec)
+        self.spec = spec
+        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth
+        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate
         oldUnitShield.OnCreate(self, spec)
     end,
 
@@ -89,53 +49,15 @@ PersonalShield = Class(oldUnitShield) {
         oldUnitShield.ChargingUp(self, curProgress, time)
         self:SetHealth(self, self:GetMaxHealth())
     end,
-
-    ApplyDamage = function(self, instigator, amount, vector, dmgType, doOverspill)
-        oldUnitShield.ApplyDamage(self, instigator, amount, vector, dmgType, doOverspill)
-    end,
-
-    CreateShieldMesh = function(self)
-        oldUnitShield.CreateShieldMesh(self)
-    end,
-
-    RemoveShield = function(self)
-        oldUnitShield.RemoveShield(self)
-    end,
-
-    OnDestroy = function(self)
-        oldUnitShield.OnDestroy(self)
-    end
-
 }
 
 local oldUnitBubbleShield = PersonalBubble
 PersonalBubble = Class(oldUnitBubbleShield) {
 
-    InitBuffValues = function(self, spec)
-        self.spec = spec
-        local UnitxpValue = spec.Owner:GetBlueprint().Economy.xpValue
-        if UnitxpValue == nil then
-            UnitxpValue = 1
-        end
-        local ShieldHealthValue = spec.ShieldMaxHealth
-        if ShieldHealthValue == nil then
-            ShieldHealthValue = 1
-        end
-
-        if spec.Owner then
-            self.XPperDamage = UnitxpValue / ShieldHealthValue
-        else
-            self.XPperDamage = 0
-        end
-        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth -- replace this with generic
-        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate -- method to directly query
-        -- LOG(spec.ShieldRegenRate)
-        -- LOG(self.XPperDamage)
-
-    end,
-
     OnCreate = function(self, spec)
-        Shield.InitBuffValues(self, spec)
+        self.spec = spec
+        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth
+        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate
         oldUnitBubbleShield.OnCreate(self, spec)
     end,
 
@@ -148,31 +70,10 @@ PersonalBubble = Class(oldUnitBubbleShield) {
 local oldUnitCzarShield = CzarShield
 CzarShield = Class(oldUnitCzarShield) {
 
-    InitBuffValues = function(self, spec)
-        self.spec = spec
-        local UnitxpValue = spec.Owner:GetBlueprint().Economy.xpValue
-        if UnitxpValue == nil then
-            UnitxpValue = 1
-        end
-        local ShieldHealthValue = spec.ShieldMaxHealth
-        if ShieldHealthValue == nil then
-            ShieldHealthValue = 1
-        end
-
-        if spec.Owner then
-            self.XPperDamage = UnitxpValue / ShieldHealthValue
-        else
-            self.XPperDamage = 0
-        end
-        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth -- replace this with generic
-        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate -- method to directly query
-        -- LOG(spec.ShieldRegenRate)
-        -- LOG(self.XPperDamage)
-
-    end,
-
     OnCreate = function(self, spec)
-        Shield.InitBuffValues(self, spec)
+        self.spec = spec
+        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth
+        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate
         oldUnitCzarShield.OnCreate(self, spec)
     end,
 
@@ -185,31 +86,10 @@ CzarShield = Class(oldUnitCzarShield) {
 local oldUnitTransportShield = TransportShield
 TransportShield = Class(oldUnitTransportShield) {
 
-    InitBuffValues = function(self, spec)
-        self.spec = spec
-        local UnitxpValue = spec.Owner:GetBlueprint().Economy.xpValue
-        if UnitxpValue == nil then
-            UnitxpValue = 1
-        end
-        local ShieldHealthValue = spec.ShieldMaxHealth
-        if ShieldHealthValue == nil then
-            ShieldHealthValue = 1
-        end
-
-        if spec.Owner then
-            self.XPperDamage = UnitxpValue / ShieldHealthValue
-        else
-            self.XPperDamage = 0
-        end
-        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth -- replace this with generic
-        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate -- method to directly query
-        -- LOG(spec.ShieldRegenRate)
-        -- LOG(self.XPperDamage)
-
-    end,
-
     OnCreate = function(self, spec)
-        Shield.InitBuffValues(self, spec)
+        self.spec = spec
+        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth
+        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate
         oldUnitTransportShield.OnCreate(self, spec)
     end,
 
@@ -222,31 +102,10 @@ TransportShield = Class(oldUnitTransportShield) {
 local oldAntiArtilleryShield = AntiArtilleryShield
 AntiArtilleryShield = Class(oldAntiArtilleryShield) {
 
-    InitBuffValues = function(self, spec)
-        self.spec = spec
-        local UnitxpValue = spec.Owner:GetBlueprint().Economy.xpValue
-        if UnitxpValue == nil then
-            UnitxpValue = 1
-        end
-        local ShieldHealthValue = spec.ShieldMaxHealth
-        if ShieldHealthValue == nil then
-            ShieldHealthValue = 1
-        end
-
-        if spec.Owner then
-            self.XPperDamage = UnitxpValue / ShieldHealthValue
-        else
-            self.XPperDamage = 0
-        end
-        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth -- replace this with generic
-        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate -- method to directly query
-        -- LOG(spec.ShieldRegenRate)
-        -- LOG(self.XPperDamage)
-
-    end,
-
     OnCreate = function(self, spec)
-        self:InitBuffValues(spec)
+        self.spec = spec
+        spec.Owner.Sync.ShieldMaxHp = spec.ShieldMaxHealth
+        spec.Owner.Sync.ShieldRegen = spec.ShieldRegenRate
         oldAntiArtilleryShield.OnCreate(self, spec)
     end,
 
@@ -257,10 +116,11 @@ AntiArtilleryShield = Class(oldAntiArtilleryShield) {
 
     OnDamage = function(self, instigator, amount, vector, type)
         local absorbed = self:OnGetDamageAbsorption(instigator, amount, type)
-        local hp = self:GetMaxHealth()
-        if (self.XPperDamage * absorbed) > 3 then
-            self.Owner:AddXP(self.XPperDamage * absorbed * 0.25)
-            --               LOG('___' .. self.XPperDamage*absorbed)
+        local xpPerHp = self.Owner.xpPerHp
+        if xpPerHp then
+            local sumXp = xpPerHp * absorbed
+            self.Owner:AddXp(sumXp * Utils.TakenDamegeToXpModifier)
+            instigator:AddXp(sumXp * Utils.DealingDamageToXpModifier)
         end
         oldAntiArtilleryShield.OnDamage(self, instigator, amount, vector, type)
     end

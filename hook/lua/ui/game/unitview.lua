@@ -1,10 +1,11 @@
 do
+    local Utils = import('/mods/TotalVeterancyRebalanced/lua/sim/VeterancyUtils.lua')
     local OldUpdateWindow = UpdateWindow
 
     function UpdateWindow(info)
         OldUpdateWindow(info)
 
-        if info.blueprintId != 'unknown' then
+        if info.blueprintId ~= 'unknown' then
             for index = 1, 5 do
                 local i = index
                 controls.vetIcons[i]:Hide()
@@ -19,77 +20,83 @@ do
             local bp = __blueprints[info.blueprintId]
             --enemy level display
             if info.entityId == nil and info.maxHealth and bp.Defense.MaxHealth then
-                if table.find(bp.Categories,'COMMAND') or table.find(bp.Categories,'SUBCOMMANDER') then
+                if table.find(bp.Categories, 'COMMAND') or table.find(bp.Categories, 'SUBCOMMANDER') then
                     controls.vetXPText:SetText('Level ☠☠☠')
                     controls.vetXPText:Show()
                 else
-                    local level =  (bp.Defense.MaxHealth - info.maxHealth) / 5
-                    local killxp = bp.Economy.xpValue
-                    if  level > 1  then
-                        level = 10 * (level-0.9)
-                        killxp = killxp*level*0.25
-                        if killxp > 1000000000 then killxp = 0 end
-                        controls.vetXPText:SetText(string.format('Level~%d  worth ~%d XP', level, killxp  ))
-                        controls.vetXPText:Show()
-                    else
-                        killxp = killxp*level*0.25
-                        controls.vetXPText:SetText(string.format('Level~%d  worth ~%d XP', level, killxp  ))
-                        controls.vetXPText:Show()
+                    local level = Utils.GetUnitLevelByHealth(bp.Defense.MaxHealth, info.maxHealth)
+                    local killxp = Utils.GetKillXpByLevel(bp.Economy.BaseXpValue, level)
+                    local killxpString = Utils.FormatXpAmount(killxp)
+                    controls.vetXPText:SetText(
+                        string.format(
+                            'Level~%d  worth ~%s XP',
+                            level,
+                            killxpString
+                        )
+                    )
+                    controls.vetXPText:Show()
+                end
+            end
+
+            if bp.Economy.BaseXpValue then
+                --enemy xp display
+                if info.entityId == nil then
+                    controls.shieldText:SetText(string.format('BaseXP %d', bp.Economy.BaseXpValue))
+                    controls.shieldText:Show()
+                end
+
+                --level progress and new numerical xp display
+                local unitData = UnitData[info.entityId]
+                if unitData.LevelProgress then
+                    local level = math.floor(unitData.LevelProgress)
+                    local percent = unitData.LevelProgress - level
+                    local xpNextLevel = 0
+                    local xp = 0
+                    if level < Utils.LevelCap then
+                        xpNextLevel = Utils.GetXpToLevel(bp.Economy.BaseXpValue, level + 1)
+                        xp = xpNextLevel * percent
                     end
+                    local worth = Utils.GetKillXpByLevel(bp.Economy.BaseXpValue, level)
+                    local xpString = Utils.FormatXpAmount(xp)
+                    local xpNextLevelString = Utils.FormatXpAmount(xpNextLevel)
+                    local worthString = Utils.FormatXpAmount(worth)
+                    controls.XPText:SetText(
+                        string.format(
+                            'current XP %s / next Level %s / worth %s',
+                            xpString,
+                            xpNextLevelString,
+                            worthString
+                        )
+                    )
+                    controls.XPText:Show()
+                    controls.vetXPBar:SetValue(percent)
+                    controls.vetXPText:SetText(string.format('Level %d', level))
+                    controls.vetXPText:Show()
+                    controls.vetXPBar:Show()
                 end
-            end
-            --enemy xp display
-            if info.entityId == nil and bp.Economy.xpValue  then
-                local basexp = bp.Economy.xpValue*0.25
-                controls.shieldText:SetText(string.format('BaseXP %d', basexp ))
-                controls.shieldText:Show()
-            end
-
-            --level progress and new numerical xp display
-            if UnitData[info.entityId].LevelProgress then
-                local level = math.floor(UnitData[info.entityId].LevelProgress)
-                local percent = UnitData[info.entityId].LevelProgress - level
---            local XPnextLevel = UnitData[info.entityId].XPnextLevel
---            local xp = UnitData[info.entityId].Txp
-                local XPnextLevel = 0--bp.Economy.XPperLevel * (1+ 0.1*(level-1))
-                local xp = 0
-                if level < 1000 then
-                	local CurrentLevelXP = bp.Economy.XPperLevel* (1+ 0.1*(level-1))
-                    xp = percent*CurrentLevelXP
-                   -- for i = 1,level do
-                   --     local Xpn = bp.Economy.XPperLevel * (1+ 0.1*(i-1))
-                        XPnextLevel = XPnextLevel + (level) * CurrentLevelXP
-                  --  end
-                    xp = xp + XPnextLevel - CurrentLevelXP
-                end
---            LOG('___logspam')
-                local worth = level * bp.Economy.xpValue*0.25
-                if worth > 1000000 then worth = 0 end
-
-                controls.XPText:SetText(string.format('current XP %d / next Level %d / worth %d', xp,XPnextLevel,worth))
-                controls.XPText:Show()
-                controls.vetXPBar:SetValue(percent)
-                controls.vetXPText:SetText(string.format('Level %d', level))
-                controls.vetXPText:Show()
-                controls.vetXPBar:Show()
             end
 
             -- regen rate
             if info.health and UnitData[info.entityId].RegenRate then
-                controls.health:SetText(string.format("%d / %d +%d/s", info.health, info.maxHealth,math.floor(UnitData[info.entityId].RegenRate)))
+                controls.health:SetText(string.format("%d / %d +%d/s", info.health, info.maxHealth,
+                    math.floor(UnitData[info.entityId].RegenRate)))
             end
             -- shield hp, regen
             if info.shieldRatio > 0 and UnitData[info.entityId].ShieldMaxHp then
                 controls.shieldText:Show()
                 if UnitData[info.entityId].ShieldRegen then
-                    controls.shieldText:SetText(string.format("%d / %d +%d/s", math.floor(UnitData[info.entityId].ShieldMaxHp*info.shieldRatio), UnitData[info.entityId].ShieldMaxHp ,UnitData[info.entityId].ShieldRegen))
+                    controls.shieldText:SetText(string.format("%d / %d +%d/s",
+                        math.floor(UnitData[info.entityId].ShieldMaxHp * info.shieldRatio),
+                        UnitData[info.entityId].ShieldMaxHp, UnitData[info.entityId].ShieldRegen))
                 else
-                    controls.shieldText:SetText(string.format("%d / %d", math.floor(UnitData[info.entityId].ShieldMaxHp*info.shieldRatio), UnitData[info.entityId].ShieldMaxHp ))
+                    controls.shieldText:SetText(string.format("%d / %d",
+                        math.floor(UnitData[info.entityId].ShieldMaxHp * info.shieldRatio),
+                        UnitData[info.entityId].ShieldMaxHp))
                 end
             end
             -- changed. build rate sync replaced by method
-            if info.userUnit != nil and info.userUnit:GetBuildRate() >= 2 then
-                controls.Buildrate:SetText(string.format("%d",math.floor(info.userUnit:GetBuildRate())))
+            if info.userUnit ~= nil and info.userUnit:GetBuildRate() >= 2 then
+                controls.Buildrate:SetText(string.format("%d", math.floor(info.userUnit:GetBuildRate())))
                 controls.Buildrate:Show()
             end
         else

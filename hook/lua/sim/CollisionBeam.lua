@@ -10,6 +10,8 @@
 local oldCollisionBeam = CollisionBeam
 CollisionBeam = Class(oldCollisionBeam) {
 
+    rateOfFireDamageMult = 1,
+
     OnImpact = function(self, impactType, targetEntity)
         self:SetDamageTable()
         oldCollisionBeam.OnImpact(self, impactType, targetEntity)
@@ -34,7 +36,7 @@ CollisionBeam = Class(oldCollisionBeam) {
                 dmgmod = v * dmgmod
             end
         end
-        damage = damage * dmgmod
+        damage = damage * dmgmod * self.rateOfFireDamageMult
         if not instigator:IsDead() and damage > 0 then
             local radius = damageData.DamageRadius
             if radius and radius > 0 then
